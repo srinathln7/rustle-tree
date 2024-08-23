@@ -2,5 +2,5 @@
 members = [ 
     "merkle",
     "util",
-    "rustle_tree"
+    "cli"
 ]

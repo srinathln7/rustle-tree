@@ -1,7 +1,7 @@
 use log::info;
 use std::error::Error;
 use std::fmt;
-use util::{calc_sha256, max, min};
+use util::calc_sha256;
 
 #[derive(Debug)]
 pub struct MerkleTreeError {
@@ -93,6 +93,63 @@ impl MerkleTree {
             leaf_idx
         );
         gen_proof(self.root.as_deref().expect("No root"), leaf_idx)
+    }
+
+    pub fn verify_merkle_proof(
+        &self,
+        root_hash: &str,
+        file_hash: &str,
+        file_idx: usize,
+        proofs: &[&TreeNode],
+    ) -> Result<bool, MerkleTreeError> {
+        println!(
+            "[merkle-tree] verifying merkle proof for file index {} with merkle root hash {}",
+            file_idx, root_hash
+        );
+
+        let root = match &self.root {
+            Some(root) => root,
+            None => return Err(MerkleTreeError::new("Empty root")),
+        };
+
+        if root.hash != root_hash {
+            return Err(MerkleTreeError::new("Merkle root hash mismatch"));
+        }
+
+        let mut merkle_hash = file_hash.to_string();
+        let leaf = find_leaf(root, file_idx)?;
+
+        if leaf.hash != merkle_hash {
+            return Ok(false);
+        }
+
+        // If the root has either a left or right child
+        if root.left.is_some() || root.right.is_some() {
+            // Manually create a new `TreeNode` instance instead of cloning
+            let mut curr = TreeNode {
+                hash: leaf.hash.clone(),
+                left: None,
+                right: None,
+                left_idx: leaf.left_idx,
+                right_idx: leaf.right_idx,
+            };
+
+            for proof in proofs {
+                if curr.left_idx < proof.left_idx && curr.right_idx < proof.right_idx {
+                    merkle_hash =
+                        calc_sha256(&[merkle_hash.as_bytes(), proof.hash.as_bytes()].concat());
+                } else {
+                    merkle_hash =
+                        calc_sha256(&[proof.hash.as_bytes(), merkle_hash.as_bytes()].concat());
+                }
+
+                // Update the indices in the mutable curr node
+                curr.left_idx = usize::min(curr.left_idx, proof.left_idx);
+                curr.right_idx = usize::max(curr.right_idx, proof.right_idx);
+            }
+        }
+
+        Ok(root.hash == merkle_hash && root_hash == merkle_hash)
     }
 }
 
@@ -244,7 +301,10 @@ fn find_sibling<'a>(
 // generate_proof_indices generates proof indices for the leaf node corresponding to the given leaf index.
 // It traverses the Merkle tree from the root to the leaf node, collecting the left and right indices
 // of each node in the proof path and appends them to the result.
-pub fn generate_proof_indices(root: &TreeNode, leaf_idx: usize) -> Result<Vec<[usize; 2]>, MerkleTreeError> {
+pub fn generate_proof_indices(
+    root: &TreeNode,
+    leaf_idx: usize,
+) -> Result<Vec<[usize; 2]>, MerkleTreeError> {
     let mut result: Vec<[usize; 2]> = Vec::new();
 
     // Generate the proof nodes
