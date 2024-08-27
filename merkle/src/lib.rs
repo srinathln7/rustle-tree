@@ -27,7 +27,7 @@ impl fmt::Display for MerkleTreeError {
 // impl std::error::Error for MerkleTreeError
 impl Error for MerkleTreeError {}
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub struct TreeNode {
     pub hash: String,
     pub left_idx: usize,
@@ -36,6 +36,7 @@ pub struct TreeNode {
     pub right: Option<Box<TreeNode>>,
 }
 
+#[derive(Debug)]
 pub struct MerkleTree {
     root: Option<Box<TreeNode>>,
 }
@@ -45,10 +46,10 @@ impl MerkleTree {
     pub fn new(files: &[Vec<u8>]) -> Result<MerkleTree, MerkleTreeError> {
         let n = files.len();
         if n == 0 {
-            return Err(MerkleTreeError::new("Empty file list"));
+            return Err(MerkleTreeError::new("empty file list"));
         }
 
-        info!("Creating a new Merkle tree with {} files", files.len());
+        info!("creating a new Merkle tree with {} files", files.len());
         let root = MerkleTree::build_tree(files, 0, n - 1);
         Ok(MerkleTree {
             root: Some(Box::new(root)),
@@ -102,18 +103,18 @@ impl MerkleTree {
         file_idx: usize,
         proofs: &[&TreeNode],
     ) -> Result<bool, MerkleTreeError> {
-        println!(
+        info!(
             "[merkle-tree] verifying merkle proof for file index {} with merkle root hash {}",
             file_idx, root_hash
         );
 
         let root = match &self.root {
             Some(root) => root,
-            None => return Err(MerkleTreeError::new("Empty root")),
+            None => return Err(MerkleTreeError::new("empty root")),
         };
 
         if root.hash != root_hash {
-            return Err(MerkleTreeError::new("Merkle root hash mismatch"));
+            return Err(MerkleTreeError::new("merkle root hash mismatch"));
         }
 
         let mut merkle_hash = file_hash.to_string();
@@ -154,7 +155,7 @@ impl MerkleTree {
 }
 
 // gen_proof generates a Merkle proof for the given leaf index.
-pub fn gen_proof(root: &TreeNode, leaf_idx: usize) -> Result<Vec<&TreeNode>, MerkleTreeError> {
+fn gen_proof(root: &TreeNode, leaf_idx: usize) -> Result<Vec<&TreeNode>, MerkleTreeError> {
     // Check for errors: root bring none or leaf index out of bounds
     if leaf_idx < root.left_idx || leaf_idx > root.right_idx {
         return Err(MerkleTreeError::new("index out of bounds"));
@@ -295,7 +296,7 @@ fn find_sibling<'a>(
     }
 
     // If no sibling is found, return an error
-    Err(MerkleTreeError::new("The node has no sibling"))
+    Err(MerkleTreeError::new("node has no sibling"))
 }
 
 // generate_proof_indices generates proof indices for the leaf node corresponding to the given leaf index.
@@ -316,4 +317,148 @@ pub fn generate_proof_indices(
     }
 
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    //use log::info;
+    //use std::error::Error;
+
+    #[test]
+    fn merkle_tree() {
+        let tests = vec![
+            ("EmptyFile", vec![]),
+            ("SingleFile", vec![b"A".to_vec()]),
+            (
+                "FourFiles",
+                vec![b"A".to_vec(), b"B".to_vec(), b"C".to_vec(), b"D".to_vec()],
+            ),
+            (
+                "FiveFiles",
+                vec![
+                    b"A".to_vec(),
+                    b"B".to_vec(),
+                    b"C".to_vec(),
+                    b"D".to_vec(),
+                    b"E".to_vec(),
+                ],
+            ),
+            ("TwentySixFiles", (b'A'..=b'Z').map(|c| vec![c]).collect()),
+        ];
+
+        // Test for Empty file
+        let (_, files) = &tests[0];
+        let err = MerkleTree::new(files);
+        assert_eq!(
+            err.unwrap_err().to_string(),
+            "MerkleTreeError: empty file list"
+        );
+
+        // Test for Five files
+        let (_, files) = &tests[3];
+        let result = MerkleTree::new(files);
+
+        match result {
+            Ok(merkle_tree) => {
+                let mut merkle_proof: Vec<Vec<usize>> = Vec::new();
+                for file_idx in 0..files.len() {
+                    let merkle_proof_idx =
+                        generate_proof_indices(merkle_tree.root.as_deref().unwrap(), file_idx)
+                            .unwrap(); // Handle the error appropriately
+
+                    // Convert each [usize; 2] into Vec<usize> and append to merkle_proof
+                    for idx_pair in merkle_proof_idx {
+                        merkle_proof.push(vec![idx_pair[0], idx_pair[1]]);
+                    }
+                }
+
+                assert_eq!(
+                    merkle_proof,
+                    vec![
+                        vec![1, 1],
+                        vec![2, 2],
+                        vec![3, 4],
+                        vec![0, 0],
+                        vec![2, 2],
+                        vec![3, 4],
+                        vec![0, 1],
+                        vec![3, 4],
+                        vec![4, 4],
+                        vec![0, 2],
+                        vec![3, 3],
+                        vec![0, 2],
+                    ]
+                );
+            }
+            Err(e) => {
+                // Handle the error, e.g., assert that an error was expected
+                println!("Failed to create Merkle tree: {}", e);
+            }
+        }
+
+        // Verification test for non-empty files
+        for i in 1..tests.len() {
+            let (name, files) = &tests[i];
+            println!("Running test case: {}", name);
+
+            let merkle_tree = MerkleTree::new(files).expect("MerkleTreeError: empty file list");
+
+            // Forward verification test
+            println!("Test case - Merkle verification forward");
+            for (idx, file) in files.iter().enumerate() {
+                let merkle_proofs_result = merkle_tree.generate_merkle_proof(idx);
+
+                match merkle_proofs_result {
+                    Ok(merkle_proofs) => {
+                        let is_verified = merkle_tree
+                            .verify_merkle_proof(
+                                &merkle_tree.root.as_ref().unwrap().hash,
+                                &calc_sha256(file),
+                                idx,
+                                &merkle_proofs,
+                            )
+                            .unwrap();
+
+                        assert!(
+                            is_verified,
+                            "Merkle proof verification failed for test {} at file index {}",
+                            name, idx
+                        );
+                    }
+                    Err(e) => {
+                        panic!("Failed to generate Merkle proof: {}", e);
+                    }
+                }
+            }
+
+            // Reverse verification test
+            println!("Test case - merkle verification reverse");
+            for idx in (0..files.len()).rev() {
+                let merkle_proofs_result = merkle_tree.generate_merkle_proof(idx);
+
+                match merkle_proofs_result {
+                    Ok(merkle_proofs) => {
+                        let is_verified = merkle_tree
+                            .verify_merkle_proof(
+                                &merkle_tree.root.as_ref().unwrap().hash,
+                                &calc_sha256(&files[idx]),
+                                idx,
+                                &merkle_proofs,
+                            )
+                            .unwrap();
+
+                        assert!(
+                            is_verified,
+                            "Merkle proof verification failed for test {} at file index {}",
+                            name, idx
+                        );
+                    }
+                    Err(e) => {
+                        panic!("Failed to generate Merkle proof: {}", e);
+                    }
+                }
+            }
+        }
+    }
 }
