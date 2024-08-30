@@ -1,6 +1,8 @@
 [workspace]
 members = [ 
+    "api_v1",
+    "cli",
     "merkle",
     "util",
-    "cli"
 ]
+

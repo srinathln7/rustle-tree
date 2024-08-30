@@ -8,7 +8,7 @@ pub struct MerkleTreeError {
     details: String,
 }
 
-// Define a `new` method
+// Define a `new` method for error
 impl MerkleTreeError {
     fn new(msg: &str) -> MerkleTreeError {
         MerkleTreeError {
@@ -17,14 +17,14 @@ impl MerkleTreeError {
     }
 }
 
-// impl: Display trait on MerkleTreeError
+// implement Display trait on MerkleTreeError
 impl fmt::Display for MerkleTreeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "MerkleTreeError: {}", self.details)
     }
 }
 
-// impl std::error::Error for MerkleTreeError
+// implement std::error::Error for MerkleTreeError
 impl Error for MerkleTreeError {}
 
 #[derive(PartialEq, Debug)]
@@ -38,7 +38,7 @@ pub struct TreeNode {
 
 #[derive(Debug)]
 pub struct MerkleTree {
-    root: Option<Box<TreeNode>>,
+    pub root: Option<Box<TreeNode>>,
 }
 
 impl MerkleTree {
@@ -93,7 +93,7 @@ impl MerkleTree {
             "[merkle-tree] starting to generate merkle proof for file index {}",
             leaf_idx
         );
-        gen_proof(self.root.as_deref().expect("No root"), leaf_idx)
+        gen_proof(self.root.as_deref().expect("no root"), leaf_idx)
     }
 
     pub fn verify_merkle_proof(
@@ -322,8 +322,6 @@ pub fn generate_proof_indices(
 #[cfg(test)]
 mod tests {
     use super::*;
-    //use log::info;
-    //use std::error::Error;
 
     #[test]
     fn merkle_tree() {
