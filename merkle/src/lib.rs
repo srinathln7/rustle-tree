@@ -36,9 +36,38 @@ pub struct TreeNode {
     pub right: Option<Box<TreeNode>>,
 }
 
+impl Clone for TreeNode {
+    fn clone(&self) -> Self {
+        TreeNode {
+            hash: self.hash.clone(),
+            left_idx: self.left_idx,
+            right_idx: self.right_idx,
+            left: self
+                .left
+                .as_ref()
+                .map(|left_node| Box::new((**left_node).clone())),
+            right: self
+                .right
+                .as_ref()
+                .map(|right_node| Box::new((**right_node).clone())),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct MerkleTree {
     pub root: Option<Box<TreeNode>>,
+}
+
+impl Clone for MerkleTree {
+    fn clone(&self) -> Self {
+        MerkleTree {
+            root: self
+                .root
+                .as_ref()
+                .map(|root_node| Box::new((**root_node).clone())),
+        }
+    }
 }
 
 impl MerkleTree {
@@ -151,6 +180,13 @@ impl MerkleTree {
         }
 
         Ok(root.hash == merkle_hash && root_hash == merkle_hash)
+    }
+
+    pub fn root_hash(&self) -> String {
+        match &self.root {
+            Some(root) => root.hash.clone(),
+            None => String::new(),
+        }
     }
 }
 

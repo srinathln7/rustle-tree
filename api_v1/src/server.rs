@@ -1,7 +1,8 @@
 use dotenv::dotenv;
 use merkle::MerkleTree;
 use std::env;
-use std::net::SocketAddr;
+use std::sync::Arc;
+use std::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Status};
 
 pub mod rustle_tree {
@@ -14,17 +15,32 @@ use rustle_tree::{
     UploadResponse,
 };
 
-#[derive(Debug, Default)]
-pub struct MerkleTreeService {
+#[derive(Debug)]
+struct GlobalState {
     files: Vec<Vec<u8>>,
     merkle_tree: Option<MerkleTree>,
 }
 
+impl Default for GlobalState {
+    fn default() -> Self {
+        GlobalState {
+            files: Vec::new(),
+            merkle_tree: None,
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct MerkleTreeService {
+    global_state: Arc<Mutex<GlobalState>>,
+}
+
 #[tonic::async_trait]
 impl MerkleTreeTrait for MerkleTreeService {
-
-    async fn upload(&self, request: Request<UploadRequest>) -> Result<Response<UploadResponse>, Status> {
-        
+    async fn upload(
+        &self,
+        request: Request<UploadRequest>,
+    ) -> Result<Response<UploadResponse>, Status> {
         let req = request.into_inner();
 
         // Build the Merkle tree from the provided files
@@ -33,47 +49,62 @@ impl MerkleTreeTrait for MerkleTreeService {
             Err(err) => return Err(Status::internal(err.to_string())),
         };
 
-        // Store the files and the Merkle tree
-        self.files = req.files;
-        self.merkle_tree = Some(merkle_tree);
+        // Store the files and Merkle tree in the global state
+        let mut global_state = self.global_state.lock().unwrap();
+        global_state.files = req.files;
+        global_state.merkle_tree = Some(merkle_tree.clone());
 
-        // Get the Merkle root
-        let merkle_root = match self.merkle_tree.as_ref() {
-            Some(tree) => match tree.root {
-                Some(root) => root,
-                None => return Err(Status::internal("Merkle root not found")),
-            },
-            None => return Err(Status::internal("Merkle tree not initialized")),
-        };
-
-
-        self.merkle_tree.as_ref().unwrap();
+        // Calculate the Merkle root hash
+        let merkle_root_hash = merkle_tree.root_hash();
 
         // Respond with the Merkle root hash
         Ok(Response::new(UploadResponse {
-            merkle_root_hash: merkle_root.hash.as_bytes().to_vec(),
+            merkle_root_hash: merkle_root_hash.into_bytes(),
         }))
     }
 
+    async fn download(
+        &self,
+        request: Request<DownloadRequest>,
+    ) -> Result<Response<DownloadResponse>, Status> {
+        let req = request.into_inner();
+        let file_index = req.file_index as usize;
 
+        // Retrieve the global state
+        let global_state = self.global_state.lock().unwrap();
 
+        // Check if the requested index is within the range of stored files
+        if file_index >= global_state.files.len() {
+            return Err(Status::not_found("File index out of range"));
+        }
 
+        // Retrieve the requested file
+        let file_data = global_state.files[file_index].clone();
+
+        // Respond with the requested file
+        Ok(Response::new(DownloadResponse {
+            file_content: file_data,
+        }))
+    }
 }
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
 
-    let addr: SocketAddr = env::var("SERVER_ADDRESS")
+    let addr = env::var("RUSTLE_TREE_ADDRESS")
         .unwrap_or_else(|_| "[::1]:50051".to_string())
         .parse()?;
-    let merkle_tree_service = MerkleTreeService::default();
 
-    println!("MerkleTreeServer listening on {}", addr);
+    println!("Server running on {:?}", addr);
+
+    let global_state = Arc::new(Mutex::new(GlobalState::default()));
+    let service = MerkleTreeService {
+        global_state: global_state.clone(),
+    };
 
     Server::builder()
-        .add_service(MerkleTreeServer::new(merkle_tree_service))
+        .add_service(MerkleTreeServer::new(service))
         .serve(addr)
         .await?;
 
