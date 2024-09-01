@@ -47,6 +47,13 @@ pub async fn setup_grpc_client() -> Result<MerkleTreeClient<Channel>, Box<dyn st
     dotenv().ok();
     let grpc_server_addr = env::var("SERVER_ADDRESS").expect("SERVER_ADDRESS must be set");
 
+    // Ensure the address includes the scheme
+    let grpc_server_addr = if grpc_server_addr.starts_with("http://") || grpc_server_addr.starts_with("https://") {
+        grpc_server_addr
+    } else {
+        format!("http://{}", grpc_server_addr)
+    };
+
     println!("gRPC client dialing on server address {}", grpc_server_addr);
 
     let client = MerkleTreeClient::connect(grpc_server_addr).await?;
@@ -111,8 +118,9 @@ pub async fn verify_merkle_proofs<'a>(
 ) -> Result<VerifyResponse, Box<dyn std::error::Error>> {
     // Extract necessary fields from the request
     let VerifyRequest {
-        root_hash,
         files,
+        
+        root_hash,
         file_idx,
         proofs,
     } = request;
@@ -195,19 +203,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Download response: {:?}", download_response);
 
     // Pass the client as mutable reference
-    let proof_response = get_merkle_proof(&mut client, 0).await?;
-    println!("Proof response: {:?}", proof_response);
+    let proof_response_1 = get_merkle_proof(&mut client, 0).await?;
+    println!("Proof response: {:?}", proof_response_1);
 
-    // let verify_request = VerifyRequest {
-    //     root_hash: upload_response.root_hash.into_bytes(),
-    //     file_idx: 0,
-    //     file: download_response.file,
-    //     proofs: proof_response.proofs,
-    // };
+    // Independently verify the client proof - positive case
+    let files_1 = vec![vec![1, 2, 3], vec![4, 5, 6]];
+    let verify_request_1 = VerifyRequest {
+        files: &files_1,
+        
+        root_hash: upload_response.root_hash,
+        file_idx: 0,
+        proofs: proof_response_1.proofs,
+    };
+    let verify_response_1 = verify_merkle_proofs(verify_request_1).await?;
+    println!("Verify response: {:?}", verify_response_1);
 
-    // // Pass the client as mutable reference
-    // let verify_response = verify_merkle_proof(&mut client, verify_request).await?;
-    // println!("Verify response: {:?}", verify_response);
+
+    // Independently verify the client proof - negative case
+    let files_2 = vec![vec![1, 2, 4], vec![4, 5, 6]];
+    let proof_response_2 = get_merkle_proof(&mut client, 0).await?;
+    let verify_request_2 = VerifyRequest {
+        files: &files_2,
+        
+        root_hash: "d16e06cabb8ab6bacdedc91e3d786e7ad11d66525dd50635d882bf87a26abb75".to_string(),
+        file_idx: 0,
+        proofs: proof_response_2.proofs,
+    };
+    let verify_response_2 = verify_merkle_proofs(verify_request_2).await?;
+    println!("Verify response: {:?}", verify_response_2);
 
     Ok(())
 }

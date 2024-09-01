@@ -57,6 +57,8 @@ impl MerkleTreeTrait for MerkleTreeService {
         // Calculate the Merkle root hash
         let merkle_root_hash = merkle_tree.root_hash();
 
+        println!("Uploaded all files successfully to the server");
+
         // Respond with the Merkle root hash
         Ok(Response::new(UploadResponse {
             merkle_root_hash: merkle_root_hash.into_bytes(),
@@ -80,6 +82,8 @@ impl MerkleTreeTrait for MerkleTreeService {
 
         // Retrieve the requested file
         let file_data = global_state.files[file_index].clone();
+
+        println!("Downloaded file successfully from the server");
 
         // Respond with the requested file
         Ok(Response::new(DownloadResponse {
