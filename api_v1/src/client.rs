@@ -4,8 +4,7 @@ use rustle_tree::{
 };
 use std::env;
 use tonic::transport::Channel;
-
-//use util::calc_sha256;
+use util::calc_sha256;
 
 pub mod rustle_tree {
     tonic::include_proto!("rustle_tree");
@@ -30,10 +29,11 @@ pub struct ProofResponse {
 }
 
 #[derive(Debug)]
-pub struct VerifyRequest {
-    pub root_hash: Vec<u8>,
-    pub file_idx: i64,
-    pub file: Vec<u8>,
+pub struct VerifyRequest<'a> {
+    pub files: &'a [Vec<u8>],
+
+    pub root_hash: String,
+    pub file_idx: usize,
     pub proofs: Vec<rustle_tree::TreeNode>,
 }
 
@@ -42,9 +42,6 @@ pub struct VerifyResponse {
     pub msg: String,
     pub is_verified: bool,
 }
-
-//use tokio::sync::OnceCell;
-// static GRPC_CLIENT: OnceCell<MerkleTreeClient<Channel>> = OnceCell::const_new();
 
 pub async fn setup_grpc_client() -> Result<MerkleTreeClient<Channel>, Box<dyn std::error::Error>> {
     dotenv().ok();
@@ -109,30 +106,78 @@ pub async fn get_merkle_proof(
     })
 }
 
-// pub async fn verify_merkle_proof(
-//     client: &mut MerkleTreeClient<Channel>,
-//     req: VerifyRequest,
-// ) -> Result<VerifyResponse, Box<dyn std::error::Error>> {
-//     let request = tonic::Request::new(VerifyProofRequest {
-//         root_hash: req.root_hash,
-//         file_index: req.file_idx,
-//         file_hash: calc_sha256(&req.file).into(),
-//         proofs: req.proofs,
-//     });
+pub async fn verify_merkle_proofs<'a>(
+    request: VerifyRequest<'a>,
+) -> Result<VerifyResponse, Box<dyn std::error::Error>> {
+    // Extract necessary fields from the request
+    let VerifyRequest {
+        root_hash,
+        files,
+        file_idx,
+        proofs,
+    } = request;
 
-//     let response = client.verify_merkle_proof(request).await?.into_inner();
+    // Calculate the hash of the specified file
+    let file_hash = calc_sha256(&files[file_idx as usize]);
 
-//     if !response.is_verified {
-//         return Err("Merkle verification failed".into());
-//     }
+    // Convert proofs from Vec<rustle_tree::TreeNode> to Vec<merkle::TreeNode>
+    let proof_refs: Vec<merkle::TreeNode> = proofs
+        .iter()
+        .map(|proof| merkle::TreeNode {
+            hash: proof.hash.clone(),
+            left_idx: proof.left_idx as usize,
+            right_idx: proof.right_idx as usize,
+            left: proof.left.as_ref().map(|l| {
+                Box::new(merkle::TreeNode {
+                    hash: l.hash.clone(),
+                    left_idx: l.left_idx as usize,
+                    right_idx: l.right_idx as usize,
+                    left: None,
+                    right: None,
+                })
+            }),
+            right: proof.right.as_ref().map(|r| {
+                Box::new(merkle::TreeNode {
+                    hash: r.hash.clone(),
+                    left_idx: r.left_idx as usize,
+                    right_idx: r.right_idx as usize,
+                    left: None,
+                    right: None,
+                })
+            }),
+        })
+        .collect();
 
-//     let msg = format!("merkle verification for file{} is successful", req.file_idx);
+    // Create an instance of the Merkle tree (you may need to adjust this based on your implementation)
+    let merkle_tree = merkle::MerkleTree::new(files)?;
 
-//     Ok(VerifyResponse {
-//         msg,
-//         is_verified: true,
-//     })
-// }
+    // Verify the Merkle proof
+    let verification_result = merkle_tree.verify_merkle_proof(
+        &root_hash,
+        &file_hash,
+        file_idx,
+        &proof_refs.iter().collect::<Vec<&merkle::TreeNode>>(),
+    );
+
+    let is_verified = match verification_result {
+        Ok(result) => result,
+        Err(err) => {
+            eprintln!("Error verifying Merkle proof: {}", err);
+            return Ok(VerifyResponse {
+                msg: format!("Verification failed: {}", err),
+                is_verified: false,
+            });
+        }
+    };
+
+    let msg = if is_verified {
+        format!("File {} verification successful", file_idx)
+    } else {
+        format!("File {} verification failed", file_idx)
+    };
+
+    Ok(VerifyResponse { msg, is_verified })
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

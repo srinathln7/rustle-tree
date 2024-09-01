@@ -163,7 +163,7 @@ impl MerkleTreeTrait for MerkleTreeService {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
 
-    let addr = env::var("RUSTLE_TREE_ADDRESS")
+    let addr = env::var("SERVER_ADDRESS")
         .unwrap_or_else(|_| "[::1]:50051".to_string())
         .parse()?;
 
