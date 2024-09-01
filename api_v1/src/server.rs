@@ -86,6 +86,77 @@ impl MerkleTreeTrait for MerkleTreeService {
             file_content: file_data,
         }))
     }
+
+    async fn get_merkle_proof(
+        &self,
+        request: Request<MerkleProofRequest>,
+    ) -> Result<Response<MerkleProofResponse>, Status> {
+        let req = request.into_inner();
+        let file_index = req.file_index as usize;
+
+        // Retrieve the global state
+        let global_state = self.global_state.lock().unwrap();
+
+        // Check if the requested index is within the range of stored files
+        if file_index >= global_state.files.len() {
+            return Err(Status::not_found("File index out of range"));
+        }
+
+        // Ensure the Merkle tree is available
+        let merkle_tree = match &global_state.merkle_tree {
+            Some(tree) => tree,
+            None => return Err(Status::internal("Merkle tree not found")),
+        };
+
+        // Generate the Merkle proof for the specified file index
+        let merkle_proofs = match merkle::MerkleTree::generate_merkle_proof(merkle_tree, file_index)
+        {
+            Ok(proofs) => proofs,
+            Err(err) => return Err(Status::internal(err.to_string())),
+        };
+
+        // Convert Vec<&TreeNode> to Vec<TreeNode>
+        let mut owned_proofs: Vec<rustle_tree::TreeNode> = Vec::with_capacity(merkle_proofs.len());
+
+        for proof in merkle_proofs {
+            let mut api_proof = rustle_tree::TreeNode {
+                hash: proof.hash.clone(), // Assuming hash is of type Vec<u8> or similar
+                left_idx: proof.left_idx as i64,
+                right_idx: proof.right_idx as i64,
+                left: None,
+                right: None,
+            };
+
+            // If there's a left child, create a TreeNode for it
+            if let Some(left) = &proof.left {
+                api_proof.left = Some(Box::new(rustle_tree::TreeNode {
+                    hash: left.hash.clone(),
+                    left_idx: left.left_idx as i64,
+                    right_idx: left.right_idx as i64,
+                    left: None,
+                    right: None,
+                }));
+            }
+
+            // If there's a right child, create a TreeNode for it
+            if let Some(right) = &proof.right {
+                api_proof.right = Some(Box::new(rustle_tree::TreeNode {
+                    hash: right.hash.clone(),
+                    left_idx: right.left_idx as i64,
+                    right_idx: right.right_idx as i64,
+                    left: None,
+                    right: None,
+                }));
+            }
+
+            owned_proofs.push(api_proof);
+        }
+
+        // Respond with the requested proofs
+        Ok(Response::new(MerkleProofResponse {
+            proofs: owned_proofs,
+        }))
+    }
 }
 
 #[tokio::main]
