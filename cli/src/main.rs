@@ -1,9 +1,50 @@
 use clap::Parser;
-use grpc_client::{download, get_merkle_proof, setup_grpc_client, upload};
+use grpc_client::{
+    download, get_merkle_proof, rustle_tree::TreeNode as RustleTreeNode, setup_grpc_client, upload,
+};
+
 use std::fs;
 use std::path::PathBuf;
 use tokio::runtime::Runtime;
 use util::{read_files_from_dir, write_file};
+use merkle::TreeNode;
+
+
+fn convert_to_merkle_tree_nodes(nodes: &[&RustleTreeNode]) -> Vec<TreeNode> {
+    nodes
+        .iter()
+        .map(|node| TreeNode {
+            hash: node.hash.clone(),
+            left_idx: node.left_idx as usize,
+            right_idx: node.right_idx as usize,
+            left: node
+                .left
+                .as_ref()
+                .map(|left_node| Box::new(convert_to_merkle_tree_node(left_node))),
+            right: node
+                .right
+                .as_ref()
+                .map(|right_node| Box::new(convert_to_merkle_tree_node(right_node))),
+        })
+        .collect()
+}
+
+fn convert_to_merkle_tree_node(node: &RustleTreeNode) -> TreeNode {
+    TreeNode {
+        hash: node.hash.clone(),
+        left_idx: node.left_idx as usize,
+        right_idx: node.right_idx as usize,
+        left: node
+            .left
+            .as_ref()
+            .map(|left_node| Box::new(convert_to_merkle_tree_node(left_node))),
+        right: node
+            .right
+            .as_ref()
+            .map(|right_node| Box::new(convert_to_merkle_tree_node(right_node))),
+    }
+}
+
 
 /// Rustle Tree CLI for uploading files, downloading files by index, and getting Merkle proofs.
 #[derive(Parser, Debug)]
@@ -81,7 +122,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let response = rt.block_on(get_merkle_proof(&mut client, file_index))?;
 
         if let Some(output_path) = args.output_path {
-            let proofs_str = serde_json::to_string(&response.proofs)?;
+            let merkle_proofs =
+                convert_to_merkle_tree_nodes(&response.proofs.iter().collect::<Vec<_>>());
+            let proofs_str = serde_json::to_string(&merkle_proofs)?;
             write_file(
                 output_path.parent().unwrap().to_str().unwrap(),
                 output_path.file_name().unwrap().to_str().unwrap(),

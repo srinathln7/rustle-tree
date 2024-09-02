@@ -304,6 +304,7 @@ dependencies = [
  "dotenv",
  "env_logger",
  "log",
+ "merkle",
  "serde",
  "serde_json",
  "tokio",

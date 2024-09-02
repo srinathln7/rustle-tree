@@ -3,6 +3,7 @@ use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
 
+
 pub fn calc_sha256(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data);
@@ -46,6 +47,8 @@ pub fn write_file(directory: &str, file_name: &str, content: &str) -> io::Result
 
     Ok(())
 }
+
+
 
 pub fn min(a: usize, b: usize) -> usize {
     if a < b {

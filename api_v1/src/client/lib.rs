@@ -6,7 +6,6 @@ use rustle_tree::{
 use std::env;
 use tonic::transport::Channel;
 use util::calc_sha256;
-use serde::Serialize;
 
 pub mod rustle_tree {
     tonic::include_proto!("rustle_tree");
@@ -24,7 +23,7 @@ pub struct DownloadResponse {
     pub file: Vec<u8>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct ProofResponse {
     pub msg: String,
     pub proofs: Vec<rustle_tree::TreeNode>,
