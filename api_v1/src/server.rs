@@ -156,6 +156,8 @@ impl MerkleTreeTrait for MerkleTreeService {
             owned_proofs.push(api_proof);
         }
 
+        println!("Successfully generated merkle proofs");
+
         // Respond with the requested proofs
         Ok(Response::new(MerkleProofResponse {
             proofs: owned_proofs,

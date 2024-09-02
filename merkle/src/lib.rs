@@ -1,4 +1,5 @@
 use log::info;
+use serde::Serialize;
 use std::error::Error;
 use std::fmt;
 use util::calc_sha256;
@@ -27,7 +28,7 @@ impl fmt::Display for MerkleTreeError {
 // implement std::error::Error for MerkleTreeError
 impl Error for MerkleTreeError {}
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Serialize)]
 pub struct TreeNode {
     pub hash: String,
     pub left_idx: usize,
@@ -54,7 +55,7 @@ impl Clone for TreeNode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct MerkleTree {
     pub root: Option<Box<TreeNode>>,
 }

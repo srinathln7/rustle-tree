@@ -9,7 +9,11 @@ path = "src/server.rs"
 
 [[bin]]
 name = "grpc-client"
-path = "src/client.rs"
+path = "src/client/main.rs"
+
+[lib]
+name = "grpc_client"
+path = "src/client/lib.rs"
 
 [dependencies]
 dotenv = "0.15"  # Replace "0.15" with the latest version if necessary
@@ -18,7 +22,8 @@ prost = "0.12"
 tokio = { version = "1.37.0", features = ["full"] }
 util = { path = "../util" }
 merkle = { path = "../merkle"}
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [build-dependencies]
 tonic-build = "0.11.0"
-
