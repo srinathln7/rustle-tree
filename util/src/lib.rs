@@ -3,7 +3,6 @@ use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
 
-
 pub fn calc_sha256(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data);
@@ -13,15 +12,18 @@ pub fn calc_sha256(data: &[u8]) -> String {
 
 pub fn read_files_from_dir(dir: &str) -> io::Result<Vec<Vec<u8>>> {
     let mut file_contents = Vec::new();
-    let entries = fs::read_dir(dir)?;
-
+    
+    // Collect entries and sort by file name
+    let mut entries: Vec<_> = fs::read_dir(dir)?
+        .filter_map(|e| e.ok()) // Remove Err variants
+        .filter(|e| e.path().is_file()) // Only process files
+        .collect();
+    
+    entries.sort_by_key(|entry| entry.file_name()); // Sort by file name
+    
     for entry in entries {
-        let entry = entry?;
         let path = entry.path();
-        if path.is_dir() {
-            continue;
-        }
-
+        
         let mut file = File::open(&path)?;
         let mut content = Vec::new();
         file.read_to_end(&mut content)?;
@@ -31,6 +33,7 @@ pub fn read_files_from_dir(dir: &str) -> io::Result<Vec<Vec<u8>>> {
 
     Ok(file_contents)
 }
+
 
 pub fn write_file(directory: &str, file_name: &str, content: &str) -> io::Result<()> {
     // Create the directory if it doesn't exist
@@ -47,8 +50,6 @@ pub fn write_file(directory: &str, file_name: &str, content: &str) -> io::Result
 
     Ok(())
 }
-
-
 
 pub fn min(a: usize, b: usize) -> usize {
     if a < b {
