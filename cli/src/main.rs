@@ -1,5 +1,9 @@
 use clap::Parser;
-use grpc_client::{download, get_merkle_proof, setup_grpc_client, upload};
+use grpc_client::{
+    download, get_merkle_proof, rustle_tree::TreeNode as RustleTreeNode, setup_grpc_client, upload,
+};
+
+use merkle::TreeNode;
 use std::fs;
 use std::path::PathBuf;
 use tokio::runtime::Runtime;
@@ -8,16 +12,16 @@ use util::{read_files_from_dir, write_file};
 /// Rustle Tree CLI for uploading files, downloading files by index, and getting Merkle proofs.
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(short, long, action = clap::ArgAction::SetTrue)]
+    #[arg(short ='u', long, action = clap::ArgAction::SetTrue)]
     upload: bool,
 
-    #[arg(short, long, action = clap::ArgAction::SetTrue)]
+    #[arg(short = 'd', long, action = clap::ArgAction::SetTrue)]
     download: bool,
 
     #[arg(short = 'M', long = "getMerkleProofs", action = clap::ArgAction::SetTrue)]
     get_merkle_proofs: bool,
 
-    #[arg(short = 'd', long, value_name = "DIR_PATH", requires = "upload")]
+    #[arg(short = 'f', long, value_name = "DIR_PATH", requires = "upload")]
     files_dir: Option<PathBuf>,
 
     #[arg(
@@ -58,6 +62,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.upload {
         let files_dir = args.files_dir.expect("Files directory required");
         let files = read_files_from_dir(files_dir.to_str().unwrap())?;
+
+        // Print file names and contents for debugging
+        for (index, file) in files.iter().enumerate() {
+            println!("Uploading file{}: {:?}", index, file); // Debugging output
+        }
+
         let response = rt.block_on(upload(&mut client, files))?;
 
         if let Some(merkle_root_hash_path) = args.merkle_root_hash_path {
@@ -70,10 +80,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     } else if args.download {
         let file_index = args.file_index.expect("File index required");
+        println!("Requesting file with index: {}", file_index);
         let response = rt.block_on(download(&mut client, file_index))?;
 
         if let Some(output_path) = args.output_path {
-            fs::write(output_path.clone(), response.file)?;
+            let output_path = if output_path.is_dir() {
+                // Append file name if output path is a directory
+                let file_name = format!("file{}.txt", file_index); // e.g., "file0.txt"
+                output_path.join(file_name)
+            } else {
+                // Otherwise treat it as a full file path
+                output_path.clone()
+            };
+
+            // Ensure the file gets written properly
+            fs::write(&output_path, response.file)?;
             println!("File downloaded and stored at {:?}", output_path);
         }
     } else if args.get_merkle_proofs {
@@ -81,7 +102,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let response = rt.block_on(get_merkle_proof(&mut client, file_index))?;
 
         if let Some(output_path) = args.output_path {
-            let proofs_str = serde_json::to_string(&response.proofs)?;
+            let output_path = if output_path.is_dir() {
+                // Append proof file name if output path is a directory
+                let file_name = format!("proof_file{}.json", file_index); // e.g., "proof_file0.json"
+                output_path.join(file_name)
+            } else {
+                output_path.clone()
+            };
+
+            let merkle_proofs =
+                convert_to_merkle_tree_nodes(&response.proofs.iter().collect::<Vec<_>>());
+            let proofs_str = serde_json::to_string(&merkle_proofs)?;
+
             write_file(
                 output_path.parent().unwrap().to_str().unwrap(),
                 output_path.file_name().unwrap().to_str().unwrap(),
@@ -92,4 +124,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn convert_to_merkle_tree_nodes(nodes: &[&RustleTreeNode]) -> Vec<TreeNode> {
+    nodes
+        .iter()
+        .map(|node| TreeNode {
+            hash: node.hash.clone(),
+            left_idx: node.left_idx as usize,
+            right_idx: node.right_idx as usize,
+            left: node
+                .left
+                .as_ref()
+                .map(|left_node| Box::new(convert_to_merkle_tree_node(left_node))),
+            right: node
+                .right
+                .as_ref()
+                .map(|right_node| Box::new(convert_to_merkle_tree_node(right_node))),
+        })
+        .collect()
+}
+
+fn convert_to_merkle_tree_node(node: &RustleTreeNode) -> TreeNode {
+    TreeNode {
+        hash: node.hash.clone(),
+        left_idx: node.left_idx as usize,
+        right_idx: node.right_idx as usize,
+        left: node
+            .left
+            .as_ref()
+            .map(|left_node| Box::new(convert_to_merkle_tree_node(left_node))),
+        right: node
+            .right
+            .as_ref()
+            .map(|right_node| Box::new(convert_to_merkle_tree_node(right_node))),
+    }
 }
