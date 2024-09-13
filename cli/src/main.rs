@@ -21,7 +21,10 @@ struct Args {
     #[arg(short = 'M', long = "getMerkleProofs", action = clap::ArgAction::SetTrue)]
     get_merkle_proofs: bool,
 
-    #[arg(short = 'f', long, value_name = "DIR_PATH", requires = "upload")]
+    #[arg(short = 'b', long, action = clap::ArgAction::SetTrue)]
+    build_merkle_tree: bool, // New argument for building Merkle tree
+
+    #[arg(short = 'f', long, value_name = "DIR_PATH")]
     files_dir: Option<PathBuf>,
 
     #[arg(
@@ -31,6 +34,14 @@ struct Args {
         requires = "upload"
     )]
     merkle_root_hash_path: Option<PathBuf>,
+
+    #[arg(
+        short = 'P',
+        long,
+        value_name = "MERKLE_TREE_PATH",
+        requires = "build_merkle_tree"
+    )]
+    merkle_tree_path: Option<PathBuf>,
 
     #[arg(
         short = 'i',
@@ -120,6 +131,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &proofs_str,
             )?;
             println!("Merkle proofs stored at {:?}", output_path);
+        }
+    } else if args.build_merkle_tree {
+        // New build Merkle tree functionality
+        let files_dir = args.files_dir.expect("Files directory required");
+        let files = read_files_from_dir(files_dir.to_str().unwrap())?;
+
+        // Build the Merkle tree from files
+        let merkle_tree = merkle::MerkleTree::new(&files)?;
+
+        // Serialize the entire Merkle tree to JSON
+        let merkle_tree_json = serde_json::to_string(&merkle_tree)?;
+
+        // Save the Merkle root hash to the specified path
+        if let Some(merkle_tree_path) = args.merkle_tree_path {
+            write_file(
+                merkle_tree_path.parent().unwrap().to_str().unwrap(),
+                merkle_tree_path.file_name().unwrap().to_str().unwrap(),
+                &merkle_tree_json,
+            )?;
+            println!("Merkle tree stored at {:?}", merkle_tree_path);
         }
     }
 
