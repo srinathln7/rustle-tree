@@ -41,5 +41,18 @@ $CLI_PATH -M -i 2 -o "$PROOF_DIR/file2.txt"  # Pass the directory, CLI will appe
 
 $CLI_PATH -M -i 3 -o "$PROOF_DIR/file3.txt"  # Pass the directory, CLI will append file name
 
+# Step 6: Client independently verifies the integrity of the file without involving the server
+$CLI_PATH -v  -P "$OUTPUT_DIR_MERKLE_TREE" -O "$OUTPUT_DIR_MERKLE_ROOT" -f "$DOWNLOAD_DIR" -i 0 -p "$PROOF_DIR/file0.txt"
+
+$CLI_PATH -v  -P "$OUTPUT_DIR_MERKLE_TREE" -O "$OUTPUT_DIR_MERKLE_ROOT" -f "$DOWNLOAD_DIR" -i 1 -p "$PROOF_DIR/file1.txt"
+
+$CLI_PATH -v  -P "$OUTPUT_DIR_MERKLE_TREE" -O "$OUTPUT_DIR_MERKLE_ROOT" -f "$DOWNLOAD_DIR" -i 2 -p "$PROOF_DIR/file2.txt"
+
+
+$CLI_PATH -v  -P "$OUTPUT_DIR_MERKLE_TREE" -O "$OUTPUT_DIR_MERKLE_ROOT" -f "$DOWNLOAD_DIR" -i 3 -p "$PROOF_DIR/file0.txt" #negative case
+$CLI_PATH -v  -P "$OUTPUT_DIR_MERKLE_TREE" -O "$OUTPUT_DIR_MERKLE_ROOT" -f "$DOWNLOAD_DIR" -i 3 -p "$PROOF_DIR/file3.txt" # positive case
+
+
+
 # Output success message
 echo "Operations completed successfully."

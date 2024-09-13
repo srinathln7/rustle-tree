@@ -7,7 +7,7 @@ use merkle::TreeNode;
 use std::fs;
 use std::path::PathBuf;
 use tokio::runtime::Runtime;
-use util::{read_files_from_dir, write_file};
+use util::{calc_sha256, read_files_from_dir, write_file};
 
 /// Rustle Tree CLI for uploading files, downloading files by index, and getting Merkle proofs.
 #[derive(Parser, Debug)]
@@ -24,23 +24,16 @@ struct Args {
     #[arg(short = 'b', long, action = clap::ArgAction::SetTrue)]
     build_merkle_tree: bool, // New argument for building Merkle tree
 
+    #[arg(short = 'v', long, action = clap::ArgAction::SetTrue)]
+    verify_proof: bool, // New argument for verifying proof
+
     #[arg(short = 'f', long, value_name = "DIR_PATH")]
     files_dir: Option<PathBuf>,
 
-    #[arg(
-        short = 'O',
-        long,
-        value_name = "MERKLE_ROOT_HASH_PATH",
-        requires = "upload"
-    )]
+    #[arg(short = 'O', long, value_name = "MERKLE_ROOT_HASH_PATH")]
     merkle_root_hash_path: Option<PathBuf>,
 
-    #[arg(
-        short = 'P',
-        long,
-        value_name = "MERKLE_TREE_PATH",
-        requires = "build_merkle_tree"
-    )]
+    #[arg(short = 'P', long, value_name = "MERKLE_TREE_PATH")]
     merkle_tree_path: Option<PathBuf>,
 
     #[arg(
@@ -58,6 +51,14 @@ struct Args {
         conflicts_with = "upload"
     )]
     output_path: Option<PathBuf>,
+
+    #[arg(
+        short = 'p',
+        long,
+        value_name = "PROOF_PATH",
+        requires = "verify_proof"
+    )]
+    proof_path: Option<PathBuf>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -151,6 +152,48 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &merkle_tree_json,
             )?;
             println!("Merkle tree stored at {:?}", merkle_tree_path);
+        }
+    } else if args.verify_proof {
+        // New verify proof functionality
+        let merkle_tree_path = args.merkle_tree_path.expect("Merkle tree path required");
+        let merkle_root_hash_path = args
+            .merkle_root_hash_path
+            .expect("Merkle root hash path required");
+        let file_dir = args.files_dir.expect("File directory required");
+        let file_idx = args.file_index.expect("File index required");
+        let proof_path = args.proof_path.expect("Proof path directory required");
+
+        // Read Merkle tree from file
+        let merkle_tree_json = fs::read_to_string(merkle_tree_path)?;
+        let merkle_tree: merkle::MerkleTree = serde_json::from_str(&merkle_tree_json)?;
+
+        // Read Merkle root hash
+        let root_hash = fs::read_to_string(merkle_root_hash_path)?
+            .trim()
+            .to_string();
+
+        // Read file hash for the file at the provided index
+        let files = read_files_from_dir(file_dir.to_str().unwrap())?;
+        let file = &files[file_idx as usize];
+        let file_hash = calc_sha256(file);
+
+        // Read Merkle proof
+        //let proof_file_path = proof_path.join(format!("proof_file{}.json", file_idx));
+        let proofs_json = fs::read_to_string(proof_path)?;
+        let proofs: Vec<merkle::TreeNode> = serde_json::from_str(&proofs_json)?;
+
+        // Call the verify_merkle_proof function
+        let is_valid = merkle_tree.verify_merkle_proof(
+            &root_hash,
+            &file_hash,
+            file_idx as usize,
+            &proofs.iter().collect::<Vec<_>>(),
+        )?;
+
+        if is_valid {
+            println!("\x1b[32mProof verified successfully.\x1b[0m");
+        } else {
+            println!("\x1b[31mFailed to verify proof.\x1b[0m");
         }
     }
 
