@@ -56,7 +56,13 @@ sequenceDiagram
 
 ### Detailed Explanation
 
-1. **Uploading Files**
+1. **Building Merkle Tree (Client-Side)**
+   - **Client->>Client: buildMerkleTree(files)**
+     Independently, the client builds a Merkle tree using the files it has. This process does not involve the server.
+   - **Client->>Client: store Merkle tree**
+     After building the Merkle tree, the client stores it locally for future use.
+
+2. **Uploading Files**
    - **Client->>Server: upload(files)**
      The client sends a request to the server to upload a set of files.
    - **Server->>Server: store files**
@@ -64,7 +70,7 @@ sequenceDiagram
    - **Server->>Client: upload confirmation**
      The server sends a confirmation back to the client indicating that the files have been successfully uploaded.
 
-2. **Downloading Files**
+3. **Downloading Files**
    - **Client->>Server: download(fileIndex)**
      The client requests to download a file identified by `fileIndex`.
    - **Server->>Server: retrieve file**
@@ -72,19 +78,13 @@ sequenceDiagram
    - **Server->>Client: return file**
      The server sends the requested file back to the client.
 
-3. **Generating Merkle Proofs**
+4. **Generating Merkle Proofs**
    - **Client->>Server: generateMerkleProof(fileIndex)**
      The client requests the server to generate a Merkle proof for the file specified by `fileIndex`.
    - **Server->>Server: generate Merkle proof**
      The server generates the Merkle proof for the specified file.
    - **Server->>Client: return Merkle proof**
      The server sends the generated Merkle proof back to the client.
-
-4. **Building Merkle Tree (Client-Side)**
-   - **Client->>Client: buildMerkleTree(files)**
-     Independently, the client builds a Merkle tree using the files it has. This process does not involve the server.
-   - **Client->>Client: store Merkle tree**
-     After building the Merkle tree, the client stores it locally for future use.
 
 5. **Verifying Merkle Proofs (Client-Side)**
    - **Client->>Client: verifyMerkleProof(proof, file)**
