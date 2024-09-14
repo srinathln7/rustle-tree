@@ -11,6 +11,8 @@ services:
       - rustle-network
     volumes:
       - ./sample:/app/sample  # Mount sample directory to keep data persistent
+    environment:
+      SERVER_ADDRESS: 0.0.0.0:50051  
 
   cli:
     build:
@@ -24,8 +26,15 @@ services:
     volumes:
       - ./sample:/app/sample  # Mount the sample directory
       - ./run_operations.sh:/app/run_operations.sh 
-    entrypoint: ["./target/release/cli", "-v", "-P", "/app/sample/merkle_tree.json", "-r", "/app/sample/merkle_root_hash.txt", "-f", "/app/sample/upload", "-i", "0", "-p", "/app/sample/proofs"]
+    environment:
+      SERVER_ADDRESS: grpc-server:50051
+    stdin_open: true  # Keep the STDIN open
+    tty: true         # Allocate a pseudo-TTY  
 
 networks:
   rustle-network:
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.19.0.0/16 
