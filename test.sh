@@ -13,13 +13,13 @@ YELLOW='\033[0;33m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
-# Step 1: Upload files to the server
-echo -e "${YELLOW}Uploading files to the server${NC}"
-$CLI_PATH -u -f "$UPLOAD_DIR" -O "$OUTPUT_DIR_MERKLE_ROOT"
-
-# Step 2: Client independently builds the merkle tree later for verification purposes
+# Step 1: Client independently builds the merkle tree later for verification purposes
 echo -e "${YELLOW}Client independently computing the merkle tree and the root hash${NC}"
 $CLI_PATH -b -f "$UPLOAD_DIR" -P "$OUTPUT_DIR_MERKLE_TREE"
+
+# Step 2: Upload files to the server
+echo -e "${YELLOW}Uploading files to the server${NC}"
+$CLI_PATH -u -f "$UPLOAD_DIR" -O "$OUTPUT_DIR_MERKLE_ROOT"
 
 # Step 3: Delete the uploaded files from the client's disk
 echo -e "${YELLOW}Client erasing all the uploaded files from the disk${NC}"
@@ -76,4 +76,4 @@ echo -e "${YELLOW}Client independently verifying merkle proofs for file3 - posit
 $CLI_PATH -v  -P "$OUTPUT_DIR_MERKLE_TREE" -O "$OUTPUT_DIR_MERKLE_ROOT" -f "$DOWNLOAD_DIR" -i 3 -p "$PROOF_DIR/file3.json" # positive case
 
 # Output success message
-echo -e "${GREEN}Operations completed successfully.${NC}"
+echo -e "${GREEN}All operations completed successfully.${NC}"

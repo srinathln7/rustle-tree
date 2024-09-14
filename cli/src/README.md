@@ -12,63 +12,12 @@ The Rustle Tree CLI is a command-line interface for interacting with the Rustle 
 
 ## Usage
 
-### Upload Files
-
-Upload files from a directory and retrieve the Merkle root hash.
-
-```bash
-./target/debug/cli -u -f <FILES_DIR> -O <MERKLE_ROOT_HASH_PATH>
-```
-
-- `-u`: Upload flag.
-- `-f <FILES_DIR>`: Directory containing the files to upload.
-- `-O <MERKLE_ROOT_HASH_PATH>`: Path to save the Merkle root hash.
-
-Example:
-```bash
-./target/debug/cli -u -f ./sample/upload -O ./merkle_root_hash.json
-```
-
-### Download a File
-
-Download a file by its index from the gRPC server.
-
-```bash
-./target/debug/cli -d -i <FILE_INDEX> -o <OUTPUT_PATH>
-```
-
-- `-d`: Download flag.
-- `-i <FILE_INDEX>`: Index of the file to download.
-- `-o <OUTPUT_PATH>`: Path to save the downloaded file.
-
-Example:
-```bash
-./target/debug/cli -d -i 0 -o ./sample/download/file0.txt
-```
-
-### Get Merkle Proofs
-
-Retrieve Merkle proofs for a file by its index.
-
-```bash
-./target/debug/cli -M -i <FILE_INDEX> -o <PROOF_OUTPUT_PATH>
-```
-
-- `-M`: Get Merkle proofs flag.
-- `-i <FILE_INDEX>`: Index of the file for which to retrieve Merkle proofs.
-- `-o <PROOF_OUTPUT_PATH>`: Path to save the Merkle proof.
-
-Example:
-```bash
-./target/debug/cli -M -i 0 -o ./sample/merkle-proofs/file0.txt
-```
-
 ### Build a Merkle Tree Locally
 
 Build a Merkle tree from a directory of files and save it to disk.
 
 ```bash
-./target/debug/cli -b -f <FILES_DIR> -P <MERKLE_TREE_PATH>
+./target/release/cli -b -f <FILES_DIR> -P <MERKLE_TREE_PATH>
 ```
 
 - `-b`: Build Merkle tree flag.
@@ -77,7 +26,58 @@ Build a Merkle tree from a directory of files and save it to disk.
 
 Example:
 ```bash
-./target/debug/cli -b -f ./sample/upload -P ./merkle_tree.json
+./target/release/cli -b -f ./sample/upload -P ./merkle_tree.json
+```
+
+### Upload Files
+
+Upload files from a directory and retrieve the Merkle root hash.
+
+```bash
+./target/release/cli -u -f <FILES_DIR> -O <MERKLE_ROOT_HASH_PATH>
+```
+
+- `-u`: Upload flag.
+- `-f <FILES_DIR>`: Directory containing the files to upload.
+- `-O <MERKLE_ROOT_HASH_PATH>`: Path to save the Merkle root hash.
+
+Example:
+```bash
+./target/release/cli -u -f ./sample/upload -O ./merkle_root_hash.json
+```
+
+### Download a File
+
+Download a file by its index from the gRPC server.
+
+```bash
+./target/release/cli -d -i <FILE_INDEX> -o <OUTPUT_PATH>
+```
+
+- `-d`: Download flag.
+- `-i <FILE_INDEX>`: Index of the file to download.
+- `-o <OUTPUT_PATH>`: Path to save the downloaded file.
+
+Example:
+```bash
+./target/release/cli -d -i 0 -o ./sample/download/file0.txt
+```
+
+### Get Merkle Proofs
+
+Retrieve Merkle proofs for a file by its index.
+
+```bash
+./target/release/cli -M -i <FILE_INDEX> -o <PROOF_OUTPUT_PATH>
+```
+
+- `-M`: Get Merkle proofs flag.
+- `-i <FILE_INDEX>`: Index of the file for which to retrieve Merkle proofs.
+- `-o <PROOF_OUTPUT_PATH>`: Path to save the Merkle proof.
+
+Example:
+```bash
+./target/release/cli -M -i 0 -o ./sample/merkle-proofs/file0.txt
 ```
 
 ### Verify a Merkle Proof
@@ -85,7 +85,7 @@ Example:
 Verify a Merkle proof using a Merkle root hash, file hash, and proof nodes.
 
 ```bash
-./target/debug/cli -v -f <FILES_DIR> -i <FILE_INDEX> -P <MERKLE_TREE_PATH> -p <PROOF_PATH> -O <MERKLE_ROOT_HASH_PATH>
+./target/release/cli -v -f <FILES_DIR> -i <FILE_INDEX> -P <MERKLE_TREE_PATH> -p <PROOF_PATH> -O <MERKLE_ROOT_HASH_PATH>
 ```
 
 - `-v`: Verify proof flag.
@@ -97,7 +97,7 @@ Verify a Merkle proof using a Merkle root hash, file hash, and proof nodes.
 
 Example:
 ```bash
-./target/debug/cli -v -P ./merkle_tree.json -O ./merkle_root.json -f ./sample/download -i 0  -p ./sample/merkle-proofs/file0.json 
+./target/release/cli -v -P ./merkle_tree.json -O ./merkle_root.json -f ./sample/download -i 0  -p ./sample/merkle-proofs/file0.json 
 ```
 
 
