@@ -15,7 +15,7 @@ $CLI_PATH -u -f "$UPLOAD_DIR" -O "$OUTPUT_DIR_MERKLE_ROOT"
 $CLI_PATH -b -f "$UPLOAD_DIR" -P "$OUTPUT_DIR_MERKLE_TREE"
 
 # Step 3: Delete the uploaded files from the client's disk
-# rm -rf "$UPLOAD_DIR"
+rm -rf "$UPLOAD_DIR"
 
 # Step 4: Download the file with index 0 from the server
 mkdir -p "$DOWNLOAD_DIR"  # Ensure the download directory exists

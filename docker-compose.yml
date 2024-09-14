@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  grpc-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.grpc-server
+    container_name: grpc-server
+    ports:
+      - "50051:50051"  # Map the gRPC server port
+    networks:
+      - rustle-network
+    volumes:
+      - ./sample:/app/sample  # Mount sample directory to keep data persistent
+
+  cli:
+    build:
+      context: .
+      dockerfile: Dockerfile.cli
+    container_name: rustle-cli
+    depends_on:
+      - grpc-server  # Ensure the gRPC server starts first
+    networks:
+      - rustle-network
+    volumes:
+      - ./sample:/app/sample  # Mount the sample directory
+      - ./run_operations.sh:/app/run_operations.sh 
+    entrypoint: ["./target/release/cli", "-v", "-P", "/app/sample/merkle_tree.json", "-r", "/app/sample/merkle_root_hash.txt", "-f", "/app/sample/upload", "-i", "0", "-p", "/app/sample/proofs"]
+
+networks:
+  rustle-network:
+    driver: bridge
