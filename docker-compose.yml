@@ -1,0 +1,40 @@
+version: '3.8'
+services:
+  grpc-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.grpc-server
+    container_name: grpc-server
+    ports:
+      - "50051:50051"  # Map the gRPC server port
+    networks:
+      - rustle-network
+    volumes:
+      - ./sample:/app/sample  # Mount sample directory to keep data persistent
+    environment:
+      SERVER_ADDRESS: 0.0.0.0:50051  
+
+  cli:
+    build:
+      context: .
+      dockerfile: Dockerfile.cli
+    container_name: rustle-cli
+    depends_on:
+      - grpc-server  # Ensure the gRPC server starts first
+    networks:
+      - rustle-network
+    volumes:
+      - ./sample:/app/sample  # Mount the sample directory
+      - ./run_operations.sh:/app/run_operations.sh 
+    environment:
+      SERVER_ADDRESS: grpc-server:50051
+    stdin_open: true  # Keep the STDIN open
+    tty: true         # Allocate a pseudo-TTY  
+
+networks:
+  rustle-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.19.0.0/16 
