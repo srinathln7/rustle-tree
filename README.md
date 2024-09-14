@@ -35,9 +35,12 @@ sequenceDiagram
     actor Client
     participant Server
 
+    Client->>Client: buildMerkleTree(files)
+    Client->>Client: store Merkle tree
+
     Client->>Server: upload(files)
     Server->>Server: store files
-    Server->>Client: upload confirmation
+    Server->>Client: upload confirmation (merkle_root_hash)
 
     Client->>Server: download(fileIndex)
     Server->>Server: retrieve file
@@ -46,9 +49,6 @@ sequenceDiagram
     Client->>Server: generateMerkleProof(fileIndex)
     Server->>Server: generate Merkle proof
     Server->>Client: return Merkle proof
-
-    Client->>Client: buildMerkleTree(files)
-    Client->>Client: store Merkle tree
 
     Client->>Client: verifyMerkleProof(proof, file)
     Client->>Client: validation result
