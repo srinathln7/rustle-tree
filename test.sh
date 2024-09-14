@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define paths
-CLI_PATH="/home/client/rust/rustle_tree/target/debug/cli"
+CLI_PATH="./target/release/cli"
 UPLOAD_DIR="./sample/upload"
 OUTPUT_DIR_MERKLE_ROOT="./sample/merkle_root_hash.json"
 OUTPUT_DIR_MERKLE_TREE="./sample/merkle_tree.json"

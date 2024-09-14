@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use tokio::runtime::Runtime;
 use util::{calc_sha256, read_files_from_dir, write_file};
 
-/// Rustle Tree CLI for uploading files, downloading files by index, and getting Merkle proofs.
+/// Rustle Tree CLI for uploading files, building merkle trees, downloading files by index, generating and verifying Merkle proofs.
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(short ='u', long, action = clap::ArgAction::SetTrue)]
@@ -74,12 +74,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.upload {
         let files_dir = args.files_dir.expect("Files directory required");
         let files = read_files_from_dir(files_dir.to_str().unwrap())?;
-
-        // Print file names and contents for debugging
-        for (index, file) in files.iter().enumerate() {
-            println!("Uploading file{}: {:?}", index, file); // Debugging output
-        }
-
         let response = rt.block_on(upload(&mut client, files))?;
 
         if let Some(merkle_root_hash_path) = args.merkle_root_hash_path {
