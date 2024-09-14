@@ -25,11 +25,10 @@ services:
       - rustle-network
     volumes:
       - ./sample:/app/sample  # Mount the sample directory
-      - ./run_operations.sh:/app/run_operations.sh 
+      - ./test.sh:/app/test.sh 
     environment:
       SERVER_ADDRESS: grpc-server:50051
-    stdin_open: true  # Keep the STDIN open
-    tty: true         # Allocate a pseudo-TTY  
+    command: tail -f /dev/null  # This keeps the container running  
 
 networks:
   rustle-network:
