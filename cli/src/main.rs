@@ -22,10 +22,10 @@ struct Args {
     get_merkle_proofs: bool,
 
     #[arg(short = 'b', long, action = clap::ArgAction::SetTrue)]
-    build_merkle_tree: bool, // New argument for building Merkle tree
+    build_merkle_tree: bool, 
 
     #[arg(short = 'v', long, action = clap::ArgAction::SetTrue)]
-    verify_proof: bool, // New argument for verifying proof
+    verify_proof: bool, 
 
     #[arg(short = 'f', long, value_name = "DIR_PATH")]
     files_dir: Option<PathBuf>,
@@ -172,7 +172,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let file_hash = calc_sha256(file);
 
         // Read Merkle proof
-        //let proof_file_path = proof_path.join(format!("proof_file{}.json", file_idx));
         let proofs_json = fs::read_to_string(proof_path)?;
         let proofs: Vec<merkle::TreeNode> = serde_json::from_str(&proofs_json)?;
 

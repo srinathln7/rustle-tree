@@ -114,7 +114,7 @@ cargo build --release
 To build and run the application using Docker, execute:
 
 ```bash
-docker compose up --build
+docker compose up 
 ```
 
 ## Testing

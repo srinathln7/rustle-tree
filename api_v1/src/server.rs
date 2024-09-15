@@ -173,7 +173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| "[::1]:50051".to_string())
         .parse()?;
 
-    println!("Server running on {:?}", addr);
+    println!("gRPC server running on {:?}", addr);
 
     let global_state = Arc::new(Mutex::new(GlobalState::default()));
     let service = MerkleTreeService {
