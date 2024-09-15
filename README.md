@@ -68,7 +68,7 @@ sequenceDiagram
    - **Server->>Server: store files**
      The server processes the files and stores them for future access.
    - **Server->>Client: upload confirmation**
-     The server sends a confirmation back to the client indicating that the files have been successfully uploaded.
+     The server sends a confirmation along with the merkle root hash back to the client indicating that the files have been successfully uploaded.
 
 3. **Downloading Files**
    - **Client->>Server: download(fileIndex)**

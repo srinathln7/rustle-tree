@@ -37,6 +37,10 @@ pub struct TreeNode {
     pub right: Option<Box<TreeNode>>,
 }
 
+// implement clone trait for TreeNode to allow deep copy
+// as_ref() method safely accesses the contents of an Option without taking ownership
+// map() method applies a function to the contents of an Option if it contains Some, allowing transformations like deep cloning
+// double dereferencing is required as Box<TreeNode> is still a smart pointer to the TreeNode
 impl Clone for TreeNode {
     fn clone(&self) -> Self {
         TreeNode {
@@ -156,7 +160,7 @@ impl MerkleTree {
 
         // If the root has either a left or right child
         if root.left.is_some() || root.right.is_some() {
-            // Manually create a new `TreeNode` instance instead of cloning
+            // Manually create a new MUTABLE `TreeNode` instance
             let mut curr = TreeNode {
                 hash: leaf.hash.clone(),
                 left: None,
@@ -271,6 +275,9 @@ fn find_leaf(root: &TreeNode, leaf_idx: usize) -> Result<&TreeNode, MerkleTreeEr
 }
 
 // find_parent finds the parent node of the given node.
+// Lifetimes ('a) in the function tie the root, node, and the returned reference to the same lifetime.
+// They ensure that the returned reference (if any) doesn't outlive the input references and prevent dangling references.
+// Without lifetimes, Rust's borrow checker would not know how the lifetimes of these references relate, leading to potential memory safety issues.
 fn find_parent<'a>(
     root: &'a TreeNode,
     node: &'a TreeNode,
@@ -280,12 +287,15 @@ fn find_parent<'a>(
     }
 
     // Check if the current root is the parent of the node
+
+    // Check if the left child of the current root is same as the node passed in
     if let Some(left) = &root.left {
         if **left == *node {
             return Ok(root);
         }
     }
 
+    // Check if the right child of the current root is same as the node passed in
     if let Some(right) = &root.right {
         if **right == *node {
             return Ok(root);
@@ -358,7 +368,7 @@ pub fn generate_proof_indices(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::*; // imports all from parent module to test module
 
     #[test]
     fn merkle_tree() {
