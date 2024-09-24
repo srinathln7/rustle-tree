@@ -22,10 +22,10 @@ struct Args {
     get_merkle_proofs: bool,
 
     #[arg(short = 'b', long, action = clap::ArgAction::SetTrue)]
-    build_merkle_tree: bool, 
+    build_merkle_tree: bool,
 
     #[arg(short = 'v', long, action = clap::ArgAction::SetTrue)]
-    verify_proof: bool, 
+    verify_proof: bool,
 
     #[arg(short = 'f', long, value_name = "DIR_PATH")]
     files_dir: Option<PathBuf>,

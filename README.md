@@ -149,6 +149,10 @@ To enhance the rustle-tree, the following improvements can be implemented:
 * Database integration:
   -  Integrate a database into the gRPC server to persist file information, upload proofs, and other relevant data across server restarts. By leveraging a database, , the server can store and retrieve file metadata efficiently, ensuring data integrity and reliability. This enhancement allows the server to maintain stateful information, enabling seamless continuation of operations even after server restarts or failures. 
 
+* Updating Leaf nodes:
+  - Processing updates to the file contents and hence rebuilding the merkle tree in logartihmic complexity without having to rebuild the whole tree again. 
+
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
