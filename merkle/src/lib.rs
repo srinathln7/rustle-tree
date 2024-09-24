@@ -18,14 +18,17 @@ impl MerkleTreeError {
     }
 }
 
-// implement Display trait on MerkleTreeError
+// implement Display trait on MerkleTreeError to format the error 
+// in a custom-defined way. Lifetime annotation is used to indicate
+// Formatter has a reference tied to the lifetime of the caller 
 impl fmt::Display for MerkleTreeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MerkleTreeError: {}", self.details)
+        write!(f, "MerkleTreeError: {}", self.details) // write macro writes to the formatter instead of std. o/p
     }
 }
 
 // implement std::error::Error for MerkleTreeError
+// to integrate it with broader Rust error handling ecosystem
 impl Error for MerkleTreeError {}
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
