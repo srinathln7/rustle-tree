@@ -131,7 +131,7 @@ impl MerkleTree {
     // The use of as_deref() simplifies the conversion of an Option<Box<TreeNode>> to Option<&TreeNode>,
     // allowing us to work with a borrowed reference instead of an owned value. `as_deref()` works with smart pointers.
     // expect call will unwrap the `Option` and will panic only if the root is `None`.
-    // Outputs a Vec because the proof is a sequence of references collected during the proof generation process. The Vec allows the function to 
+    // Outputs a Vec because the proof is a sequence of references collected during the proof generation process. The Vec allows the function to
     // create and return a new collection that is owned by the caller, while the references inside the Vec point to data owned by the original MerkleTree.
     pub fn generate_merkle_proof(
         &self,
@@ -157,14 +157,14 @@ impl MerkleTree {
             "[merkle-tree] verifying merkle proof for file index {} with merkle root hash {}",
             file_idx, root_hash
         );
-        
+
         let root = match &self.root {
             Some(root) => root,
             None => return Err(MerkleTreeError::new("empty root")),
         };
 
         // Deref Coercion: No need to manually dereference the Box with (**root).
-        // Rust applies deref coercion to automatically dereference smart pointers like Box making the code simpler and more readable. 
+        // Rust applies deref coercion to automatically dereference smart pointers like Box making the code simpler and more readable.
         if root.hash != root_hash {
             return Err(MerkleTreeError::new("merkle root hash mismatch"));
         }
@@ -263,8 +263,8 @@ fn find_parent_by_leaf_index(
 }
 
 //find_leaf finds the leaf node corresponding to the given leaf index.
-// `ok_or_else()` is used to convert Option<&Box<TreeNode>> into Result<&Box<TreeNode>, MerkleTreeError>, 
-// handling the case where a child node is None by returning an error. The ? operator then either unwraps 
+// `ok_or_else()` is used to convert Option<&Box<TreeNode>> into Result<&Box<TreeNode>, MerkleTreeError>,
+// handling the case where a child node is None by returning an error. The ? operator then either unwraps
 // the Ok value or returns the Err early, depending on the result.
 fn find_leaf(root: &TreeNode, leaf_idx: usize) -> Result<&TreeNode, MerkleTreeError> {
     match root {
@@ -344,7 +344,7 @@ fn find_parent<'a>(
 
 // find_sibling finds the sibling node of the given node.
 // as_ref() converts Option<Box<TreeNode>> into Option<&Box<TreeNode>>. This allows us to borrow the Box without taking ownership of it.
-// unwrap() retrieves the &Box<TreeNode> from the Option, assuming it is Some. The Box is then automatically dereferenced to &TreeNode, so 
+// unwrap() retrieves the &Box<TreeNode> from the Option, assuming it is Some. The Box is then automatically dereferenced to &TreeNode, so
 // we can access the TreeNode directly without needing to manually dereference the Box.
 fn find_sibling<'a>(
     root: &'a TreeNode,
@@ -391,19 +391,30 @@ pub fn generate_proof_indices(
     Ok(result)
 }
 
+// cfg(test) attribute ensures that the tests module is only included when running tests (i.e., it is ignored in the production build)
 #[cfg(test)]
 mod tests {
-    use super::*; // imports all from parent module to test module
+    // imports all from parent module to test module allowing the test function to use strcutus, functions without prefixing them
+    use super::*; 
 
     #[test]
     fn merkle_tree() {
+
+        // Vec<Vec<u8>> is necessary because it owns the file contents. Each file is a dynamically created vector (Vec<u8>) that is owned by the Vec<Vec<u8>.
+        // Vec<&[u8]> would require borrowing data that already exists somewhere, and in our case, we're generating the data on the fly. 
+        // We need ownership here, which is why Vec<Vec<u8>> is the appropriate choice.
         let tests = vec![
             ("EmptyFile", vec![]),
+           
+            // Represents a single file, which is a byte vector containing the ASCII value of "A". b"A" is a byte string literal,
+            // representing the byte sequence for the character "A". The `.to_vec()` method converts this byte string into a Vec<u8>.
             ("SingleFile", vec![b"A".to_vec()]),
+            
             (
                 "FourFiles",
                 vec![b"A".to_vec(), b"B".to_vec(), b"C".to_vec(), b"D".to_vec()],
             ),
+            
             (
                 "FiveFiles",
                 vec![
@@ -414,11 +425,17 @@ mod tests {
                     b"E".to_vec(),
                 ],
             ),
+
+            // The range expression (b'A'..=b'Z') generates all ASCII characters from A to Z as bytes.
+            // map(|c| vec![c]) converts each byte into a Vec<u8>, where each character is stored as a vector containing a single byte.
+            // collect() gathers all these vectors into a single Vec<Vec<u8>>, representing 26 files, each containing one character (A to Z).
             ("TwentySixFiles", (b'A'..=b'Z').map(|c| vec![c]).collect()),
         ];
 
         // Test for Empty file
         let (_, files) = &tests[0];
+
+        // Rust's deref coercion -  Converts &Vec<Vec<u8>> to &[Vec<u8>] implictly. These two types are not the same but can be compatible
         let err = MerkleTree::new(files);
         assert_eq!(
             err.unwrap_err().to_string(),
