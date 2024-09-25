@@ -18,9 +18,8 @@ impl MerkleTreeError {
     }
 }
 
-// implement Display trait on MerkleTreeError to format the error
-// in a custom-defined way. Lifetime annotation is used to indicate
-// Formatter has a reference tied to the lifetime of the caller
+// implement Display trait on MerkleTreeError to format the error in a custom-defined way. 
+// <`_> Lifetime annotation is used to indicate the Formatter has a reference tied to the lifetime of the caller.
 impl fmt::Display for MerkleTreeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "MerkleTreeError: {}", self.details) // write macro writes to the formatter instead of std. o/p
@@ -395,26 +394,22 @@ pub fn generate_proof_indices(
 #[cfg(test)]
 mod tests {
     // imports all from parent module to test module allowing the test function to use strcutus, functions without prefixing them
-    use super::*; 
+    use super::*;
 
     #[test]
     fn merkle_tree() {
-
         // Vec<Vec<u8>> is necessary because it owns the file contents. Each file is a dynamically created vector (Vec<u8>) that is owned by the Vec<Vec<u8>.
-        // Vec<&[u8]> would require borrowing data that already exists somewhere, and in our case, we're generating the data on the fly. 
+        // Vec<&[u8]> would require borrowing data that already exists somewhere, and in our case, we're generating the data on the fly.
         // We need ownership here, which is why Vec<Vec<u8>> is the appropriate choice.
         let tests = vec![
             ("EmptyFile", vec![]),
-           
             // Represents a single file, which is a byte vector containing the ASCII value of "A". b"A" is a byte string literal,
             // representing the byte sequence for the character "A". The `.to_vec()` method converts this byte string into a Vec<u8>.
             ("SingleFile", vec![b"A".to_vec()]),
-            
             (
                 "FourFiles",
                 vec![b"A".to_vec(), b"B".to_vec(), b"C".to_vec(), b"D".to_vec()],
             ),
-            
             (
                 "FiveFiles",
                 vec![
@@ -425,7 +420,6 @@ mod tests {
                     b"E".to_vec(),
                 ],
             ),
-
             // The range expression (b'A'..=b'Z') generates all ASCII characters from A to Z as bytes.
             // map(|c| vec![c]) converts each byte into a Vec<u8>, where each character is stored as a vector containing a single byte.
             // collect() gathers all these vectors into a single Vec<Vec<u8>>, representing 26 files, each containing one character (A to Z).

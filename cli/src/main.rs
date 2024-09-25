@@ -1,3 +1,5 @@
+// clap::Parser is used to simplify command-line argument parsing. When you derive the Parser trait from clap,
+// it automatically reads and parses arguments passed from the command line and maps them to fields in your struct.
 use clap::Parser;
 use grpc_client::{
     download, get_merkle_proof, rustle_tree::TreeNode as RustleTreeNode, setup_grpc_client, upload,
@@ -27,6 +29,7 @@ struct Args {
     #[arg(short = 'v', long, action = clap::ArgAction::SetTrue)]
     verify_proof: bool,
 
+    // PathBuf: cross-platform owned mutable path
     #[arg(short = 'f', long, value_name = "DIR_PATH")]
     files_dir: Option<PathBuf>,
 
@@ -62,26 +65,35 @@ struct Args {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize the logger
+    // Initialize the logger to output log messages to the console or other configured output.
+    // You can control the log level (e.g., info, debug, error) via an environment variable (RUST_LOG), which
+    // helps in debugging and tracking program execution without cluttering the code with unnecessary print statements.
     env_logger::init();
 
+    // Parses cmd line arguments into `Args` struct defined using the clap::Parser
     let args = Args::parse();
 
-    // Initialize the async runtime
+    // Initialize the async runtime: Since Rust’s main function cannot be `async` (with exception of #[tokio::main] macro), we need a
+    // runtime to manage asynchronous tasks. This line initializes the runtime so it can execute async code later.
     let rt = Runtime::new()?;
+
+    // Run an asynchronous function within the sync main function using `block_on` and waits for its completion and blocks it until the current thread
+    // until it is complete. It's purpose is to write async code in a sync way.
     let mut client = rt.block_on(setup_grpc_client())?;
 
     if args.upload {
-        let files_dir = args.files_dir.expect("Files directory required");
+        let files_dir = args.files_dir.expect("Files directory required"); // panic if `files_dir` argument is not provided
         let files = read_files_from_dir(files_dir.to_str().unwrap())?;
         let response = rt.block_on(upload(&mut client, files))?;
 
+        // Execute only if `Some(...)` and not None
         if let Some(merkle_root_hash_path) = args.merkle_root_hash_path {
             write_file(
                 merkle_root_hash_path.parent().unwrap().to_str().unwrap(),
                 merkle_root_hash_path.file_name().unwrap().to_str().unwrap(),
                 &response.root_hash,
             )?;
+
             println!("Merkle root hash stored at {:?}", merkle_root_hash_path);
         }
     } else if args.download {
@@ -95,7 +107,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let file_name = format!("file{}.txt", file_index); // e.g., "file0.txt"
                 output_path.join(file_name)
             } else {
-                // Otherwise treat it as a full file path
+                // Otherwise treat it as a full file path - clone() is necessary because PathBuf implements the Clone trait to create a deep copy of the path.
                 output_path.clone()
             };
 
@@ -116,6 +128,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 output_path.clone()
             };
 
+            // .iter() creates an iterator over the references to each proof node in response.proofs i.e. allow you to traverse the elements of a
+            // collection one by one, without consuming or altering the original collection.
+            //.collect::<Vec<_>>() consumes the iterator and collects these references into a vector (Vec<&ProofNode>).
+            // Vec<_> indicates that we're collecting the iterator's items into a new vector, where _ is a placeholder that infers the type automatically based on the iterator's output.
+            // The & in front passes a reference to this vector (&Vec<&ProofNode>).
             let merkle_proofs =
                 convert_to_merkle_tree_nodes(&response.proofs.iter().collect::<Vec<_>>());
             let proofs_str = serde_json::to_string(&merkle_proofs)?;
@@ -138,7 +155,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Serialize the entire Merkle tree to JSON
         let merkle_tree_json = serde_json::to_string(&merkle_tree)?;
 
-        // Save the Merkle root hash to the specified path
+        // Save the Merkle tree to the specified path
         if let Some(merkle_tree_path) = args.merkle_tree_path {
             write_file(
                 merkle_tree_path.parent().unwrap().to_str().unwrap(),

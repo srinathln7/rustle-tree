@@ -5,8 +5,8 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Status};
 
-// `rustle_tree` refers to the name of the Protobuf package defined in our .proto file. 
-// The tonic crate provides the `include_proto` macro which will generate Rust code from the .proto definitions 
+// `rustle_tree` refers to the name of the Protobuf package defined in our .proto file.
+// The tonic crate provides the `include_proto` macro which will generate Rust code from the .proto definitions
 // and include it inside the `rustle_tree` module.
 pub mod rustle_tree {
     tonic::include_proto!("rustle_tree");
@@ -27,7 +27,7 @@ struct GlobalState {
     merkle_tree: Option<MerkleTree>,
 }
 
-// Give default values for the `GlobalState` struct 
+// Give default values for the `GlobalState` struct
 impl Default for GlobalState {
     fn default() -> Self {
         GlobalState {
@@ -40,7 +40,7 @@ impl Default for GlobalState {
 #[derive(Debug, Default)]
 pub struct MerkleTreeService {
     // For a multi-threaded server: Arc allows multiple threads to share ownership of the `global_state` and ensures that it's safe to access across threads.
-    // Since accessing mutable data from multiple threads can lead to race conditions, Mutex is used to lock the data when one thread is modifying it 
+    // Since accessing mutable data from multiple threads can lead to race conditions, Mutex is used to lock the data when one thread is modifying it
     // ensuring only one thread can modify the data at a time.
     global_state: Arc<Mutex<GlobalState>>,
 }
@@ -176,11 +176,10 @@ impl MerkleTreeTrait for MerkleTreeService {
 }
 
 // Tokio is an event-driven, non-blocking I/O platform for writing asynchronous applications with the Rust programming language.
-// Box<dyn std::error::Error> means that any type that implements the Error trait can be returned, allowing flexibility in the kind of error.
-// Box is a smart pointer that allows dynamic allocation, and dyn represents dynamic dispatch, meaning the specific type of error is determined at runtime.
+// With #[tokio::main], we can have an async main function, as the macro manages the runtime setup and allows asynchronous operations inside main.
+// This macro helps set up a Runtime without requiring the user to use Runtime or Builder directly.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     // .ok() suppresses any errors (e.g., if the file doesn't exist).
     dotenv().ok();
 
@@ -192,7 +191,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let global_state = Arc::new(Mutex::new(GlobalState::default()));
 
-    // Cloning the Arc means another reference to the same data is created, INCREMENTING the reference count. 
+    // Cloning the Arc means another reference to the same data is created, INCREMENTING the reference count.
     // No actual data copy happens, so performance is maintained while allowing multiple tasks to share the same state.
     let service = MerkleTreeService {
         global_state: global_state.clone(),
