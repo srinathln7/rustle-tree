@@ -131,8 +131,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // .iter() creates an iterator over the references to each proof node in response.proofs i.e. allow you to traverse the elements of a
             // collection one by one, without consuming or altering the original collection.
             //.collect::<Vec<_>>() consumes the iterator and collects these references into a vector (Vec<&ProofNode>).
-            // Vec<_> indicates that we're collecting the iterator's items into a new vector, where _ is a placeholder that infers the type automatically based on the iterator's output.
-            // The & in front passes a reference to this vector (&Vec<&ProofNode>).
+            // Vec<_> indicates that we're collecting the iterator's items into a new vector, where `_` is a placeholder that infers the type automatically
+            // based on the iterator's output. The `&` in front passes a reference to this vector (&Vec<&ProofNode>).
             let merkle_proofs =
                 convert_to_merkle_tree_nodes(&response.proofs.iter().collect::<Vec<_>>());
             let proofs_str = serde_json::to_string(&merkle_proofs)?;
@@ -174,11 +174,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let file_idx = args.file_index.expect("File index required");
         let proof_path = args.proof_path.expect("Proof path directory required");
 
-        // Read Merkle tree from file
+        // Read Merkle tree from file and de-serialize it to get the `merkle::MerkleTree` struct
         let merkle_tree_json = fs::read_to_string(merkle_tree_path)?;
         let merkle_tree: merkle::MerkleTree = serde_json::from_str(&merkle_tree_json)?;
 
-        // Read Merkle root hash
+        // Read Merkle root hash - `trim()` removes any leading or trailing whitespace that might have been included in the file.
         let root_hash = fs::read_to_string(merkle_root_hash_path)?
             .trim()
             .to_string();
@@ -188,11 +188,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let file = &files[file_idx as usize];
         let file_hash = calc_sha256(file);
 
-        // Read Merkle proof
+        // Read Merkle proof from the file and de-serialize to retrive the proof struct
         let proofs_json = fs::read_to_string(proof_path)?;
         let proofs: Vec<merkle::TreeNode> = serde_json::from_str(&proofs_json)?;
 
         // Call the verify_merkle_proof function
+        // Conv. the proofs into a vector of references to TreeNode structs, which is needed for the verification.
         let is_valid = merkle_tree.verify_merkle_proof(
             &root_hash,
             &file_hash,
@@ -210,6 +211,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+// iter(): Borrows each element (&T), so the original collection remains unchanged.
 fn convert_to_merkle_tree_nodes(nodes: &[&RustleTreeNode]) -> Vec<TreeNode> {
     nodes
         .iter()
@@ -229,6 +231,7 @@ fn convert_to_merkle_tree_nodes(nodes: &[&RustleTreeNode]) -> Vec<TreeNode> {
         .collect()
 }
 
+// Recursive conversion of node and its children
 fn convert_to_merkle_tree_node(node: &RustleTreeNode) -> TreeNode {
     TreeNode {
         hash: node.hash.clone(),

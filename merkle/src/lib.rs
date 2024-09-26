@@ -18,7 +18,7 @@ impl MerkleTreeError {
     }
 }
 
-// implement Display trait on MerkleTreeError to format the error in a custom-defined way. 
+// implement Display trait on MerkleTreeError to format the error in a custom-defined way.
 // <`_> Lifetime annotation is used to indicate the Formatter has a reference tied to the lifetime of the caller.
 impl fmt::Display for MerkleTreeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -297,7 +297,7 @@ fn find_leaf(root: &TreeNode, leaf_idx: usize) -> Result<&TreeNode, MerkleTreeEr
 
 // find_parent finds the parent node of the given node.
 // Lifetimes ('a) in the function tie the root, node, and the returned reference to the same lifetime.
-// They ensure that the returned reference (if any) doesn't outlive the input references and prevent dangling references.
+// They ensure that the returned reference (if any) doesn't outlive the input references thereby prevent dangling references (ptrs to data that no longer exists).
 // Without lifetimes, Rust's borrow checker would not know how the lifetimes of these references relate, leading to potential memory safety issues.
 fn find_parent<'a>(
     root: &'a TreeNode,
