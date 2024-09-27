@@ -193,7 +193,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let global_state = Arc::new(Mutex::new(GlobalState::default()));
 
     // Cloning the Arc means another reference to the same data is created, INCREMENTING the reference count.
-    // No actual data copy happens, so performance is maintained while allowing multiple tasks to share the same state.
+    // No actual data copy (cloning) happens, so performance is maintained while allowing multiple tasks to share the same state.
     let service = MerkleTreeService {
         global_state: global_state.clone(),
     };

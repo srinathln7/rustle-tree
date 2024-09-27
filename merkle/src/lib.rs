@@ -18,7 +18,7 @@ impl MerkleTreeError {
     }
 }
 
-// implement Display trait on MerkleTreeError to format the error in a custom-defined way.
+// implement `Display` trait on MerkleTreeError to format the error in a custom-defined way.
 // <`_> Lifetime annotation is used to indicate the Formatter has a reference tied to the lifetime of the caller.
 impl fmt::Display for MerkleTreeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -26,8 +26,7 @@ impl fmt::Display for MerkleTreeError {
     }
 }
 
-// implement std::error::Error trait for MerkleTreeError
-// to integrate it with broader Rust error handling ecosystem
+// implement `std::error::Error` trait for MerkleTreeError to integrate it with broader Rust error handling ecosystem
 impl Error for MerkleTreeError {}
 
 // Box pointers are used here to enable recursive types, allowing `TreeNode`` to reference itself. They are heap-allocated

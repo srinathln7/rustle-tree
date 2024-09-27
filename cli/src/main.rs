@@ -77,8 +77,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // runtime to manage asynchronous tasks. This line initializes the runtime so it can execute async code later.
     let rt = Runtime::new()?;
 
-    // Run an asynchronous function within the sync main function using `block_on` and waits for its completion and blocks it until the current thread
-    // until it is complete. It's purpose is to write async code in a sync way.
+    // Run an asynchronous function within the sync main function using `block_on` and waits for its completion. Blocks until the current thread
+    // is complete. It's purpose is to write async code in a sync way.
     let mut client = rt.block_on(setup_grpc_client())?;
 
     if args.upload {
