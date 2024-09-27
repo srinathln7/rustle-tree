@@ -1,19 +1,12 @@
+// Box<dyn std::error::Error> means that any type that implements the Error trait can be returned, allowing flexibility in the kind of error.
+// Box is a smart pointer that allows dynamic allocation, and dyn represents dynamic dispatch, meaning the specific type of error is determined at runtime.
+// Details: `dyn` is used to create trait objects which enable dynamic dispatch (involves additional runtime costs). Instead of knowing the exact type at compile time,
+// dynamic dispatch allows method calls to be determined at runtime. This is useful for handling multiple types that implement the same trait,
+// like std::error::Error, in a flexible way. In this case, `dyn std::error::Error` allows the function to return different error types,
+// as long as they implement the std::error::Error trait. The Box is used to allocate the error on the heap, which is necessary because trait
+// objects must be dynamically sized and cannot be stored directly on the stack.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // `tonic_build` is a helper library crate that integrates with Tonic, a gRPC client and server implementation in Rust.
     tonic_build::compile_protos("src/proto/rustle_tree.proto")?;
     Ok(())
 }
-
-// use prost_build::Config;
-
-// fn main() {
-//     let mut config = Config::new();
-
-//     // Use field attributes to include `serde::Serialize`
-//     config.type_attribute(
-//         ".rustle_tree.TreeNode",
-//         "#[derive(serde::Serialize)]"
-//     );
-
-//     // Compile the proto files
-//     config.compile_protos(&["src/proto/rustle_tree.proto"]).unwrap();
-// }

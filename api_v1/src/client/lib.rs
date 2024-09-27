@@ -7,6 +7,9 @@ use std::env;
 use tonic::transport::Channel;
 use util::calc_sha256;
 
+// `rustle_tree` refers to the name of the Protobuf package defined in our `.proto` file.
+// The tonic crate provides the `include_proto` macro which will generate Rust code from the .proto definitions
+// and include it inside the `rustle_tree` module.
 pub mod rustle_tree {
     tonic::include_proto!("rustle_tree");
 }
@@ -45,7 +48,9 @@ pub struct VerifyResponse {
 }
 
 pub async fn setup_grpc_client() -> Result<MerkleTreeClient<Channel>, Box<dyn std::error::Error>> {
+    // .ok() suppresses any errors (e.g., if the file doesn't exist).
     dotenv().ok();
+
     let grpc_server_addr = env::var("SERVER_ADDRESS").expect("SERVER_ADDRESS must be set");
 
     // Ensure the address includes the scheme
@@ -68,6 +73,10 @@ pub async fn upload(
 ) -> Result<UploadResponse, Box<dyn std::error::Error>> {
     let request = tonic::Request::new(UploadRequest { files });
 
+    // Sends the upload request to the gRPC server. The await keyword ensures that the function suspends and waits for the server's response.
+    // In this case since  there are no other asynchronous tasks running concurrently, nothing else happens while waiting for the response.
+    // If the server returns an error, the ? operator will propagate the error. `into_inner()`: Extracts the actual response (stripping
+    // away the gRPC envelope metadata).
     let response = client.upload(request).await?.into_inner();
 
     let res = UploadResponse {
@@ -89,6 +98,7 @@ pub async fn download(
 
     let response = client.download(request).await?.into_inner();
 
+    // format! automatically converts variables (like integers) to strings rather than manual conversion and returns the string for further use
     let msg = format!("file{} downloaded successfully", file_idx);
 
     Ok(DownloadResponse {
@@ -115,6 +125,7 @@ pub async fn get_merkle_proof(
     })
 }
 
+//  The lifetime 'a is used to indicate that the function can borrow data for the duration of the request.
 pub async fn verify_merkle_proofs<'a>(
     request: VerifyRequest<'a>,
 ) -> Result<VerifyResponse, Box<dyn std::error::Error>> {

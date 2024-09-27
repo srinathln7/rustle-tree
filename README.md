@@ -140,6 +140,12 @@ Please ensure that the `sample/upload` directory contains the necessary files in
 
 To enhance the rustle-tree, the following improvements can be implemented:
 
+* Updating Leaf nodes:
+  - Processing updates to the file contents and rebuilding the merkle tree in logartihmic time complexity. 
+
+* Making gRPC-server Mutli-Threaded
+  - Currently the server is single threaded. Experiementing parallelising a few of the merkle tree operations would be fun.  
+
 * Implement Mutual TLS Authentication:
   - Introduce Mutual TLS-based authentication between the gRPC server and client to establish a secure and trusted communication channel. This ensures that both parties can verify each other's identities and encrypt the data exchanged during communication.
 

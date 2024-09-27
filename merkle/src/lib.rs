@@ -18,16 +18,21 @@ impl MerkleTreeError {
     }
 }
 
-// implement Display trait on MerkleTreeError
+// implement `Display` trait on MerkleTreeError to format the error in a custom-defined way.
+// <`_> Lifetime annotation is used to indicate the Formatter has a reference tied to the lifetime of the caller.
 impl fmt::Display for MerkleTreeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MerkleTreeError: {}", self.details)
+        write!(f, "MerkleTreeError: {}", self.details) // write macro writes to the formatter instead of std. o/p
     }
 }
 
-// implement std::error::Error for MerkleTreeError
+// implement `std::error::Error` trait for MerkleTreeError to integrate it with broader Rust error handling ecosystem
 impl Error for MerkleTreeError {}
 
+// Box pointers are used here to enable recursive types, allowing `TreeNode`` to reference itself. They are heap-allocated
+// smart pointers, ensuring that the size of the struct remains finite while allowing flexible recursive structures.
+// Without Box, Rust would try to allocate the entire tree on the stack, which is not feasible because stack frames have a fixed size.
+// The Box pointer stores the TreeNode on the heap, allowing Rust to handle this recursive structure safely and efficiently.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct TreeNode {
     pub hash: String,
@@ -38,7 +43,7 @@ pub struct TreeNode {
 }
 
 // implement clone trait for TreeNode to allow deep copy
-// as_ref() method safely accesses the contents of an Option without taking ownership
+// as_ref() method safely accesses the contents of an Option without taking ownership since we only want to borrow the value to clone it
 // map() method applies a function to the contents of an Option if it contains Some, allowing transformations like deep cloning
 // double dereferencing is required as Box<TreeNode> is still a smart pointer to the TreeNode
 impl Clone for TreeNode {
@@ -64,6 +69,8 @@ pub struct MerkleTree {
     pub root: Option<Box<TreeNode>>,
 }
 
+// Unlike the Copy trait, which makes shallow copies, Clone can handle more complex types like heap-allocated data (Box).
+// Recursive cloning (of child nodes) using Box::new()
 impl Clone for MerkleTree {
     fn clone(&self) -> Self {
         MerkleTree {
@@ -119,6 +126,11 @@ impl MerkleTree {
     }
 
     // GenerateMerkleProof generates a Merkle proof for the given leaf index.
+    // The use of as_deref() simplifies the conversion of an Option<Box<TreeNode>> to Option<&TreeNode>,
+    // allowing us to work with a borrowed reference instead of an owned value. `as_deref()` works with smart pointers.
+    // expect call will unwrap the `Option` and will panic only if the root is `None`.
+    // Outputs a Vec because the proof is a sequence of references collected during the proof generation process. The Vec allows the function to
+    // create and return a new collection that is owned by the caller, while the references inside the Vec point to data owned by the original MerkleTree.
     pub fn generate_merkle_proof(
         &self,
         leaf_idx: usize,
@@ -130,6 +142,8 @@ impl MerkleTree {
         gen_proof(self.root.as_deref().expect("no root"), leaf_idx)
     }
 
+    // Passes only a borrowed slice of references as `proofs: &[&TreeNode]` since it doesn't need to modify or own the proof data.
+    // Slices are more lightweight than vectors and sufficient for the verification task, which only reads the data.
     pub fn verify_merkle_proof(
         &self,
         root_hash: &str,
@@ -147,6 +161,8 @@ impl MerkleTree {
             None => return Err(MerkleTreeError::new("empty root")),
         };
 
+        // Deref Coercion: No need to manually dereference the Box with (**root).
+        // Rust applies deref coercion to automatically dereference smart pointers like Box making the code simpler and more readable.
         if root.hash != root_hash {
             return Err(MerkleTreeError::new("merkle root hash mismatch"));
         }
@@ -187,6 +203,7 @@ impl MerkleTree {
         Ok(root.hash == merkle_hash && root_hash == merkle_hash)
     }
 
+    // Helper function tobe consumed by other module
     pub fn root_hash(&self) -> String {
         match &self.root {
             Some(root) => root.hash.clone(),
@@ -244,6 +261,9 @@ fn find_parent_by_leaf_index(
 }
 
 //find_leaf finds the leaf node corresponding to the given leaf index.
+// `ok_or_else()` is used to convert Option<&Box<TreeNode>> into Result<&Box<TreeNode>, MerkleTreeError>,
+// handling the case where a child node is None by returning an error. The ? operator then either unwraps
+// the Ok value or returns the Err early, depending on the result.
 fn find_leaf(root: &TreeNode, leaf_idx: usize) -> Result<&TreeNode, MerkleTreeError> {
     match root {
         _ if root.left.is_none()
@@ -276,7 +296,7 @@ fn find_leaf(root: &TreeNode, leaf_idx: usize) -> Result<&TreeNode, MerkleTreeEr
 
 // find_parent finds the parent node of the given node.
 // Lifetimes ('a) in the function tie the root, node, and the returned reference to the same lifetime.
-// They ensure that the returned reference (if any) doesn't outlive the input references and prevent dangling references.
+// They ensure that the returned reference (if any) doesn't outlive the input references thereby prevent dangling references (ptrs to data that no longer exists).
 // Without lifetimes, Rust's borrow checker would not know how the lifetimes of these references relate, leading to potential memory safety issues.
 fn find_parent<'a>(
     root: &'a TreeNode,
@@ -321,6 +341,9 @@ fn find_parent<'a>(
 }
 
 // find_sibling finds the sibling node of the given node.
+// as_ref() converts Option<Box<TreeNode>> into Option<&Box<TreeNode>>. This allows us to borrow the Box without taking ownership of it.
+// unwrap() retrieves the &Box<TreeNode> from the Option, assuming it is Some. The Box is then automatically dereferenced to &TreeNode, so
+// we can access the TreeNode directly without needing to manually dereference the Box.
 fn find_sibling<'a>(
     root: &'a TreeNode,
     node: &'a TreeNode,
@@ -366,14 +389,21 @@ pub fn generate_proof_indices(
     Ok(result)
 }
 
+// cfg(test) attribute ensures that the tests module is only included when running tests (i.e., it is ignored in the production build)
 #[cfg(test)]
 mod tests {
-    use super::*; // imports all from parent module to test module
+    // imports all from parent module to test module allowing the test function to use strcutus, functions without prefixing them
+    use super::*;
 
     #[test]
     fn merkle_tree() {
+        // Vec<Vec<u8>> is necessary because it owns the file contents. Each file is a dynamically created vector (Vec<u8>) that is owned by the Vec<Vec<u8>.
+        // Vec<&[u8]> would require borrowing data that already exists somewhere, and in our case, we're generating the data on the fly.
+        // We need ownership here, which is why Vec<Vec<u8>> is the appropriate choice.
         let tests = vec![
             ("EmptyFile", vec![]),
+            // Represents a single file, which is a byte vector containing the ASCII value of "A". b"A" is a byte string literal,
+            // representing the byte sequence for the character "A". The `.to_vec()` method converts this byte string into a Vec<u8>.
             ("SingleFile", vec![b"A".to_vec()]),
             (
                 "FourFiles",
@@ -389,11 +419,16 @@ mod tests {
                     b"E".to_vec(),
                 ],
             ),
+            // The range expression (b'A'..=b'Z') generates all ASCII characters from A to Z as bytes.
+            // map(|c| vec![c]) converts each byte into a Vec<u8>, where each character is stored as a vector containing a single byte.
+            // collect() gathers all these vectors into a single Vec<Vec<u8>>, representing 26 files, each containing one character (A to Z).
             ("TwentySixFiles", (b'A'..=b'Z').map(|c| vec![c]).collect()),
         ];
 
         // Test for Empty file
         let (_, files) = &tests[0];
+
+        // Rust's deref coercion -  Converts &Vec<Vec<u8>> to &[Vec<u8>] implictly. These two types are not the same but can be compatible
         let err = MerkleTree::new(files);
         assert_eq!(
             err.unwrap_err().to_string(),
